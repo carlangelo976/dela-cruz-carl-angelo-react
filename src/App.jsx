@@ -1,7 +1,8 @@
 import { useState } from "react";
 import "./App.css";
 
-const LAVALUST_URL = "/lavalust";
+const LAVALUST_URL =
+    "https://dela-cruz-carl-angelo-lavalust.onrender.com";  
 
 function App() {
     const [loggedIn, setLoggedIn] = useState(false);
@@ -154,94 +155,116 @@ function App() {
     // =====================================================
 
     async function loadProducts() {
-        try {
-            const response = await fetch(
-                `${LAVALUST_URL}/api/products`,
-                {
-                    method: "GET",
-                    credentials: "include",
-                }
-            );
-
-            if (!response.ok) {
-                setMessage(
-                    "Unable to retrieve products."
-                );
-                return;
+    try {
+        const response = await fetch(
+            `${LAVALUST_URL}/api/products`,
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json",
+                },
             }
+        );
 
-            const result = await response.json();
+        const responseText = await response.text();
 
-            if (result.data) {
-                setProducts(result.data);
-            } else {
-                setProducts([]);
-            }
+        console.log("GET STATUS:", response.status);
+        console.log("GET URL:", response.url);
+        console.log("GET RESPONSE:", responseText);
 
-        } catch (error) {
-            console.error("GET ERROR:", error);
-
+        if (!response.ok) {
             setMessage(
-                "Error loading products."
+                `Unable to retrieve products. HTTP ${response.status}`
             );
+            return;
         }
+
+        const result = JSON.parse(responseText);
+
+        if (result.data) {
+            setProducts(result.data);
+        } else {
+            setProducts([]);
+        }
+
+    } catch (error) {
+        console.error("GET ERROR:", error);
+
+        setMessage(
+            "Error loading products."
+        );
     }
+}
 
     // =====================================================
     // ADD PRODUCT
     // =====================================================
 
-    async function addProduct() {
-        try {
-            const response = await fetch(
-                `${LAVALUST_URL}/api/products`,
-                {
-                    method: "POST",
-                    credentials: "include",
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
-                    body: JSON.stringify({
-                        product_name: addProductName,
-                        description: addDescription,
-                        price: addPrice,
-                        quantity: addQuantity,
-                    }),
-                }
-            );
-
-            const result = await response.json();
-
-            if (result.status) {
-                setMessage(
-                    "Product added successfully."
-                );
-
-                setAddProductName("");
-                setAddDescription("");
-                setAddPrice("");
-                setAddQuantity("");
-
-                setShowAdd(false);
-
-                await loadProducts();
-
-            } else {
-                setMessage(
-                    result.message ||
-                    "Failed to add product."
-                );
+   async function addProduct() {
+    try {
+        const response = await fetch(
+            `${LAVALUST_URL}/api/products`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                body: JSON.stringify({
+                    product_name: addProductName,
+                    description: addDescription,
+                    price: Number(addPrice),
+                    quantity: Number(addQuantity),
+                }),
             }
+        );
 
-        } catch (error) {
-            console.error("POST ERROR:", error);
+        const responseText = await response.text();
 
+        console.log("POST STATUS:", response.status);
+        console.log("POST URL:", response.url);
+        console.log("POST RESPONSE:", responseText);
+
+        let result;
+
+        try {
+            result = JSON.parse(responseText);
+        } catch {
+            result = null;
+        }
+
+        if (!response.ok) {
             setMessage(
-                "Error adding product."
+                `Failed to add product. HTTP ${response.status}: ${responseText}`
+            );
+            return;
+        }
+
+        if (result?.status) {
+            setMessage("Product added successfully.");
+
+            setAddProductName("");
+            setAddDescription("");
+            setAddPrice("");
+            setAddQuantity("");
+
+            setShowAdd(false);
+
+            await loadProducts();
+        } else {
+            setMessage(
+                result?.message || "Failed to add product."
             );
         }
+
+    } catch (error) {
+        console.error("POST ERROR:", error);
+
+        setMessage(
+            "Cannot connect to LavaLust API."
+        );
     }
+}
 
     // =====================================================
     // UPDATE PRODUCT
