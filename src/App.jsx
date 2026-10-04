@@ -1,8 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 
-const LAVALUST_URL =
-    "https://dela-cruz-carl-angelo-lavalust.onrender.com";
+const LAVALUST_URL = "/lavalust";
 
 function App() {
     const [loggedIn, setLoggedIn] = useState(false);
