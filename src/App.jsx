@@ -35,70 +35,75 @@ function App() {
     // LOGIN
     // =====================================================
 
-   async function handleLogin(e) {
-    e.preventDefault();
+    async function handleLogin(e) {
+        e.preventDefault();
 
-    setLoginError("");
-    setMessage("");
+        setLoginError("");
+        setMessage("");
 
-    if (!username || !password) {
-        setLoginError("Please enter username and password.");
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            `${LAVALUST_URL}/api/login`,
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/x-www-form-urlencoded",
-                    "Accept": "application/json",
-                },
-
-                credentials: "include",
-
-                body: new URLSearchParams({
-                    username: username,
-                    password: password,
-                }),
-            }
-        );
-
-        console.log("LOGIN STATUS:", response.status);
-        console.log("LOGIN URL:", response.url);
-
-        const result = await response.json();
-
-        console.log("LOGIN RESPONSE:", result);
-
-        if (response.ok && result.status) {
-
-            setLoggedIn(true);
-
-            setMessage("Login successful.");
-
-            await loadProducts();
-
-        } else {
-
-            setLoginError(
-                result.message ||
-                `Login failed. HTTP Status: ${response.status}`
-            );
+        if (!username || !password) {
+            setLoginError("Please enter username and password.");
+            return;
         }
 
-    } catch (error) {
+        try {
+            const response = await fetch(
+                `${LAVALUST_URL}/api/login`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/x-www-form-urlencoded",
+                        "Accept": "application/json",
+                    },
+                    body: new URLSearchParams({
+                        username: username,
+                        password: password,
+                    }),
+                }
+            );
 
-        console.error("LOGIN ERROR:", error);
+            console.log("LOGIN STATUS:", response.status);
+            console.log("LOGIN URL:", response.url);
 
-        setLoginError(
-            "Cannot connect to LavaLust API."
-        );
+            const responseText = await response.text();
+
+            console.log("LOGIN RESPONSE:", responseText);
+
+            let result;
+
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error("LOGIN JSON ERROR:", error);
+
+                setLoginError(
+                    `Invalid response from LavaLust. HTTP Status: ${response.status}`
+                );
+
+                return;
+            }
+
+            if (response.ok && result.status) {
+                setLoggedIn(true);
+                setMessage("Login successful.");
+
+                await loadProducts();
+            } else {
+                setLoginError(
+                    result.message ||
+                        `Login failed. HTTP Status: ${response.status}`
+                );
+            }
+        } catch (error) {
+            console.error("LOGIN ERROR:", error);
+
+            setLoginError(
+                "Cannot connect to LavaLust API."
+            );
+        }
     }
-}
+
     // =====================================================
     // LOGOUT
     // =====================================================
@@ -109,11 +114,10 @@ function App() {
                 `${LAVALUST_URL}/logout`,
                 {
                     method: "GET",
-                    credentials: "include",
                 }
             );
         } catch (error) {
-            console.error(error);
+            console.error("LOGOUT ERROR:", error);
         }
 
         setLoggedIn(false);
@@ -128,116 +132,152 @@ function App() {
     // =====================================================
 
     async function loadProducts() {
-    try {
-        const response = await fetch(
-            `${LAVALUST_URL}/api/products`,
-            {
-                method: "GET",
-                headers: {
-                    "Accept": "application/json",
-                },
-            }
-        );
+        try {
+            setMessage("");
 
-        const responseText = await response.text();
-
-        console.log("GET STATUS:", response.status);
-        console.log("GET URL:", response.url);
-        console.log("GET RESPONSE:", responseText);
-
-        if (!response.ok) {
-            setMessage(
-                `Unable to retrieve products. HTTP ${response.status}`
+            const response = await fetch(
+                `${LAVALUST_URL}/api/products`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json",
+                    },
+                }
             );
-            return;
+
+            console.log("GET STATUS:", response.status);
+            console.log("GET URL:", response.url);
+
+            const responseText = await response.text();
+
+            console.log("GET RESPONSE:", responseText);
+
+            if (!response.ok) {
+                setMessage(
+                    `Unable to retrieve products. HTTP ${response.status}`
+                );
+                return;
+            }
+
+            let result;
+
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error("GET JSON ERROR:", error);
+
+                setMessage(
+                    "Invalid response from LavaLust API."
+                );
+
+                return;
+            }
+
+            if (result.status && result.data) {
+                setProducts(result.data);
+            } else {
+                setProducts([]);
+                setMessage(
+                    result.message ||
+                        "No products found."
+                );
+            }
+        } catch (error) {
+            console.error("GET ERROR:", error);
+
+            setMessage(
+                "Error loading products."
+            );
         }
-
-        const result = JSON.parse(responseText);
-
-        if (result.data) {
-            setProducts(result.data);
-        } else {
-            setProducts([]);
-        }
-
-    } catch (error) {
-        console.error("GET ERROR:", error);
-
-        setMessage(
-            "Error loading products."
-        );
     }
-}
 
     // =====================================================
     // ADD PRODUCT
     // =====================================================
 
-   async function addProduct() {
-    try {
-        const response = await fetch(
-            `${LAVALUST_URL}/api/products`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                body: JSON.stringify({
-                    product_name: addProductName,
-                    description: addDescription,
-                    price: Number(addPrice),
-                    quantity: Number(addQuantity),
-                }),
-            }
-        );
-
-        const responseText = await response.text();
-
-        console.log("POST STATUS:", response.status);
-        console.log("POST URL:", response.url);
-        console.log("POST RESPONSE:", responseText);
-
-        let result;
-
-        try {
-            result = JSON.parse(responseText);
-        } catch {
-            result = null;
-        }
-
-        if (!response.ok) {
+    async function addProduct() {
+        if (!addProductName || !addPrice || !addQuantity) {
             setMessage(
-                `Failed to add product. HTTP ${response.status}: ${responseText}`
+                "Product name, price and quantity are required."
             );
+
             return;
         }
 
-        if (result?.status) {
-            setMessage("Product added successfully.");
+        try {
+            const response = await fetch(
+                `${LAVALUST_URL}/api/products`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
+                    body: JSON.stringify({
+                        product_name: addProductName,
+                        description: addDescription,
+                        price: Number(addPrice),
+                        quantity: Number(addQuantity),
+                    }),
+                }
+            );
 
-            setAddProductName("");
-            setAddDescription("");
-            setAddPrice("");
-            setAddQuantity("");
+            console.log("POST STATUS:", response.status);
 
-            setShowAdd(false);
+            const responseText = await response.text();
 
-            await loadProducts();
-        } else {
+            console.log("POST RESPONSE:", responseText);
+
+            let result;
+
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error("POST JSON ERROR:", error);
+
+                setMessage(
+                    `Invalid response from LavaLust. HTTP ${response.status}`
+                );
+
+                return;
+            }
+
+            if (!response.ok) {
+                setMessage(
+                    result.message ||
+                        `Failed to add product. HTTP ${response.status}`
+                );
+
+                return;
+            }
+
+            if (result.status) {
+                setMessage(
+                    "Product added successfully."
+                );
+
+                setAddProductName("");
+                setAddDescription("");
+                setAddPrice("");
+                setAddQuantity("");
+
+                setShowAdd(false);
+
+                await loadProducts();
+            } else {
+                setMessage(
+                    result.message ||
+                        "Failed to add product."
+                );
+            }
+        } catch (error) {
+            console.error("POST ERROR:", error);
+
             setMessage(
-                result?.message || "Failed to add product."
+                "Cannot connect to LavaLust API."
             );
         }
-
-    } catch (error) {
-        console.error("POST ERROR:", error);
-
-        setMessage(
-            "Cannot connect to LavaLust API."
-        );
     }
-}
 
     // =====================================================
     // UPDATE PRODUCT
@@ -248,6 +288,7 @@ function App() {
             setMessage(
                 "Please enter Product ID."
             );
+
             return;
         }
 
@@ -256,10 +297,9 @@ function App() {
                 `${LAVALUST_URL}/api/products/${updateId}`,
                 {
                     method: "PUT",
-                    credentials: "include",
                     headers: {
-                        "Content-Type":
-                            "application/json",
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
                     },
                     body: JSON.stringify({
                         product_name:
@@ -267,31 +307,62 @@ function App() {
                         description:
                             updateDescription,
                         price:
-                            updatePrice,
+                            Number(updatePrice),
                         quantity:
-                            updateQuantity,
+                            Number(updateQuantity),
                     }),
                 }
             );
 
-            const result = await response.json();
+            console.log("PUT STATUS:", response.status);
+
+            const responseText = await response.text();
+
+            console.log("PUT RESPONSE:", responseText);
+
+            let result;
+
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error("PUT JSON ERROR:", error);
+
+                setMessage(
+                    `Invalid response from LavaLust. HTTP ${response.status}`
+                );
+
+                return;
+            }
+
+            if (!response.ok) {
+                setMessage(
+                    result.message ||
+                        `Failed to update product. HTTP ${response.status}`
+                );
+
+                return;
+            }
 
             if (result.status) {
                 setMessage(
                     "Product updated successfully."
                 );
 
+                setUpdateId("");
+                setUpdateProductName("");
+                setUpdateDescription("");
+                setUpdatePrice("");
+                setUpdateQuantity("");
+
                 setShowUpdate(false);
 
                 await loadProducts();
-
             } else {
                 setMessage(
                     result.message ||
-                    "Failed to update product."
+                        "Failed to update product."
                 );
             }
-
         } catch (error) {
             console.error("UPDATE ERROR:", error);
 
@@ -310,14 +381,15 @@ function App() {
             setMessage(
                 "Please enter Product ID."
             );
+
             return;
         }
 
-        if (
-            !window.confirm(
-                `Are you sure you want to delete Product ID ${deleteId}?`
-            )
-        ) {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete Product ID ${deleteId}?`
+        );
+
+        if (!confirmed) {
             return;
         }
 
@@ -326,15 +398,49 @@ function App() {
                 `${LAVALUST_URL}/api/products/${deleteId}`,
                 {
                     method: "DELETE",
-                    credentials: "include",
                     headers: {
-                        "Content-Type":
-                            "application/json",
+                        "Accept": "application/json",
                     },
                 }
             );
 
-            const result = await response.json();
+            console.log(
+                "DELETE STATUS:",
+                response.status
+            );
+
+            const responseText = await response.text();
+
+            console.log(
+                "DELETE RESPONSE:",
+                responseText
+            );
+
+            let result;
+
+            try {
+                result = JSON.parse(responseText);
+            } catch (error) {
+                console.error(
+                    "DELETE JSON ERROR:",
+                    error
+                );
+
+                setMessage(
+                    `Invalid response from LavaLust. HTTP ${response.status}`
+                );
+
+                return;
+            }
+
+            if (!response.ok) {
+                setMessage(
+                    result.message ||
+                        `Failed to delete product. HTTP ${response.status}`
+                );
+
+                return;
+            }
 
             if (result.status) {
                 setMessage(
@@ -345,16 +451,17 @@ function App() {
                 setShowDelete(false);
 
                 await loadProducts();
-
             } else {
                 setMessage(
                     result.message ||
-                    "Failed to delete product."
+                        "Failed to delete product."
                 );
             }
-
         } catch (error) {
-            console.error("DELETE ERROR:", error);
+            console.error(
+                "DELETE ERROR:",
+                error
+            );
 
             setMessage(
                 "Error deleting product."
@@ -369,7 +476,6 @@ function App() {
     if (!loggedIn) {
         return (
             <div className="login-page">
-
                 <div className="login-card">
 
                     <h1>
@@ -444,7 +550,6 @@ function App() {
                     </p>
 
                 </div>
-
             </div>
         );
     }
@@ -540,14 +645,12 @@ function App() {
                     <thead>
 
                         <tr>
-
                             <th>ID</th>
                             <th>Product Name</th>
                             <th>Description</th>
                             <th>Price</th>
                             <th>Quantity</th>
                             <th>Created At</th>
-
                         </tr>
 
                     </thead>
