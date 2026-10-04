@@ -1,7 +1,8 @@
 import { useState } from "react";
 import "./App.css";
 
-const LAVALUST_URL = "https://dela-cruz-carl-angelo-lavalust.onrender.com";
+const LAVALUST_URL =
+    "https://dela-cruz-carl-angelo-lavalust.onrender.com/index.php";
 
 function App() {
     const [loggedIn, setLoggedIn] = useState(false);
@@ -47,14 +48,18 @@ function App() {
 
     try {
         const response = await fetch(
-            `${LAVALUST_URL}/login`,
+            `${LAVALUST_URL}/api/login`,
             {
                 method: "POST",
+
                 headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Accept": "text/html, application/json",
+                    "Content-Type":
+                        "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
                 },
+
                 credentials: "include",
+
                 body: new URLSearchParams({
                     username: username,
                     password: password,
@@ -65,24 +70,32 @@ function App() {
         console.log("LOGIN STATUS:", response.status);
         console.log("LOGIN URL:", response.url);
 
-        if (response.ok) {
+        const result = await response.json();
+
+        console.log("LOGIN RESPONSE:", result);
+
+        if (response.ok && result.status) {
+
             setLoggedIn(true);
+
             setMessage("Login successful.");
+
             await loadProducts();
+
         } else {
-            const text = await response.text();
-            console.log("LOGIN RESPONSE:", text);
 
             setLoginError(
+                result.message ||
                 `Login failed. HTTP Status: ${response.status}`
             );
         }
 
     } catch (error) {
+
         console.error("LOGIN ERROR:", error);
 
         setLoginError(
-            "Cannot connect to LavaLust. Check if LavaLust server is running."
+            "Cannot connect to LavaLust API."
         );
     }
 }
