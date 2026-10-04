@@ -1,8 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 
-const LAVALUST_URL =
-    "https://dela-cruz-carl-angelo-lavalust.onrender.com";  
+const LAVALUST_URL = "https://dela-cruz-carl-angelo-lavalust.onrender.com";
 
 function App() {
     const [loggedIn, setLoggedIn] = useState(false);
@@ -51,17 +50,11 @@ function App() {
             `${LAVALUST_URL}/login`,
             {
                 method: "POST",
-
                 headers: {
-                    "Content-Type":
-                        "application/x-www-form-urlencoded",
-
-                    "Accept":
-                        "text/html, application/json",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "text/html, application/json",
                 },
-
                 credentials: "include",
-
                 body: new URLSearchParams({
                     username: username,
                     password: password,
@@ -69,57 +62,24 @@ function App() {
             }
         );
 
-        console.log(
-            "LOGIN STATUS:",
-            response.status
-        );
+        console.log("LOGIN STATUS:", response.status);
+        console.log("LOGIN URL:", response.url);
 
-        console.log(
-            "LOGIN URL:",
-            response.url
-        );
-
-        const responseText =
-            await response.text();
-
-        console.log(
-            "LOGIN RESPONSE:",
-            responseText
-        );
-
-        /*
-         * LavaLust redirects after successful login.
-         * 200 = normal response
-         * 3xx = redirect after login
-         */
-
-        if (
-            response.ok ||
-            (
-                response.status >= 300 &&
-                response.status < 400
-            )
-        ) {
+        if (response.ok) {
             setLoggedIn(true);
-
-            setMessage(
-                "Login successful."
-            );
-
+            setMessage("Login successful.");
             await loadProducts();
-
         } else {
+            const text = await response.text();
+            console.log("LOGIN RESPONSE:", text);
+
             setLoginError(
                 `Login failed. HTTP Status: ${response.status}`
             );
         }
 
     } catch (error) {
-
-        console.error(
-            "LOGIN ERROR:",
-            error
-        );
+        console.error("LOGIN ERROR:", error);
 
         setLoginError(
             "Cannot connect to LavaLust. Check if LavaLust server is running."
